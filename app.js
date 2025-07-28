@@ -21,27 +21,35 @@ function displayUserData() {
     }
 }
 
-// Функция для открытия платежного интерфейса
-function openPayment() {
-    if (tg && tg.openInvoice) {
-        tg.showPopup({
-            title: 'Пополнение Stars',
-            message: 'Вы хотите купить 20 Telegram Stars?',
-            buttons: [
-                {id: 'buy', type: 'default', text: 'Купить 20 ⭐'},
-                {type: 'cancel'}
-            ]
-        }, function(buttonId) {
-            if (buttonId === 'buy') {
-                tg.openInvoice('your_invoice_link_here', function(status) {
-                    if (status === 'paid') {
-                        tg.showAlert('Спасибо за покупку! Ваши Stars успешно зачислены.');
-                    }
-                });
-            }
+// Функция для инициирования платежа
+async function initiatePayment() {
+    try {
+        // Получаем invoice_link от вашего Python-бота
+        const response = await fetch('https://yourpythonanywhere.pythonanywhere.com/create_invoice', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: tg.initDataUnsafe.user?.id,
+                amount: 20 // 20 Stars
+            })
         });
-    } else {
-        tg.showAlert('Платежная система недоступна в этом режиме');
+        
+        const data = await response.json();
+        
+        if (data.invoice_link) {
+            tg.openInvoice(data.invoice_link, (status) => {
+                if (status === 'paid') {
+                    tg.showAlert('✅ Спасибо! 20 Stars успешно зачислены!');
+                }
+            });
+        } else {
+            tg.showAlert('Ошибка при создании платежа');
+        }
+    } catch (error) {
+        tg.showAlert('Ошибка соединения с сервером');
+        console.error('Payment error:', error);
     }
 }
 
@@ -56,8 +64,9 @@ function createPaymentButton() {
     paymentBtn.style.border = 'none';
     paymentBtn.style.borderRadius = '5px';
     paymentBtn.style.cursor = 'pointer';
+    paymentBtn.style.fontSize = '16px';
     
-    paymentBtn.addEventListener('click', openPayment);
+    paymentBtn.addEventListener('click', initiatePayment);
     
     document.body.appendChild(paymentBtn);
 }
